@@ -1,5 +1,6 @@
 package hse.java.lectures.lecture6.tasks.synchronizer;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class Synchronizer {
@@ -17,17 +18,25 @@ public class Synchronizer {
         this.ticksPerWriter = ticksPerWriter;
     }
 
-    /**
-     * Starts infinite writer threads and waits until each writer prints exactly ticksPerWriter ticks
-     * in strict ascending id order.
-     */
     public void execute() {
-        // add monitor and sync
+        StreamingMonitor monitor = new StreamingMonitor(tasks, ticksPerWriter);
+
+        List<Thread> workers = new ArrayList<>();
+
         for (StreamWriter writer : tasks) {
+            writer.attachMonitor(monitor);
             Thread worker = new Thread(writer, "stream-writer-" + writer.getId());
+            workers.add(worker);
             worker.setDaemon(true);
             worker.start();
         }
-    }
 
+        for (Thread worker : workers) {
+            try {
+                worker.join();
+            } catch (InterruptedException exception) {
+                throw new RuntimeException(exception);
+            }
+        }
+    }
 }
